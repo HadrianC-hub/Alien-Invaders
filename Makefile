@@ -1,2 +1,2 @@
 # Space Invaders Makefile
-gcc -o invaders invaders.c -lm -lncurses
+gcc -o Alien-Invaders invaders.c -lm -lncurses

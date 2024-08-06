@@ -10,27 +10,22 @@
 
 //--------------------------------------------------------DECLARANDO VARIABLES Y ESTRUCTURAS GLOBALES----------------------------------------------------------
 struct player tank;
+struct scores high_scores;
+struct names hs_names;
 struct alien *aliens;
 struct alien *ingame_aliens;
 int *alien_out_time;
-struct shoot shot[1000];
-struct bomb bomb[1000];
+struct shoot *shot;
+struct bomb *bomb;
 struct options settings;
-unsigned int input, loops = 0, currentshots = 0, currentbombs = 0, currentaliens = 30;
-int score = 0, win = -1, difficult = 1, current_alien = 1, current_showed_alien = 1;
+unsigned int input, loops, currentshots, currentbombs, currentaliens, score, rs_score;
+int win, difficult = 1, current_alien, current_showed_alien, lang = 0;
 char tellscore[30];
 
 // Declarando exclusiones mutuas
 pthread_mutex_t win_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t player_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t alien_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t shot_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t bomb_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t score_mutex = PTHREAD_MUTEX_INITIALIZER;   // Este es el mutex del score que se va mostrando en pantalla
-pthread_mutex_t pointer_mutex = PTHREAD_MUTEX_INITIALIZER; // Este es el mutex del puntero de escritura de curses (biblioteca de dibujar en consola)
-
-// Declarando hilos a usar (logica del juego, sonido, musica y entrada del usuario)
-pthread_t game_logic_tid, user_input_tid;
 
 //----------------------------------------------------------IMPLEMENTANDO FUNCIONES DE MENUS-------------------------------------------------------------------
 // Funcion que maneja el menu principal del juego
@@ -39,14 +34,14 @@ void main_menu()
    // Detener procesos anteriores en caso de haberlos
    clear();
    // Variable de opcion
-   char option, buf[30];
+   char option;
    // Dibujar pantalla de menu
    draw_main_menu();
    while (1)
    {
       // Eleccion de opcion
       option = getch();
-      if (option == '3')
+      if (option == '4')
       {
          // Cerrar biblioteca y salir del juego
          endwin();
@@ -67,8 +62,65 @@ void main_menu()
       {
          // Abrir menu de opciones y cuando termine volver a dibujar el menu principal
          options_menu(&settings);
-         draw_main_menu();
+         if (lang == 0)
+         {
+            draw_main_menu();
+         }
+         else if (lang == 1)
+         {
+            draw_main_menu_esp();
+         }
       }
+      /*else if (option == '3')
+      {
+         mainmenu_score();
+         if (lang == 0)
+         {
+            draw_main_menu();
+         }
+         else if (lang == 1)
+         {
+            draw_main_menu_esp();
+         }
+      }*/
+      else if (option == '3')
+      {
+         system("xdg-open https://github.com/HadrianC-hub/Alien-Invaders");
+      }
+      else if (option == 'L' || option == 'l')
+      {
+         if (lang == 0)
+         {
+            lang = 1;
+            draw_main_menu_esp();
+         }
+         else if (lang == 1)
+         {
+            lang = 0;
+            draw_main_menu();
+         }
+      }
+      /*else if (option == 'r' || option == 'R')
+      {
+         if(rs_score==3)
+         {
+            reset_score();
+            move(LINES-7, 0);
+            if(lang==0)
+            {
+               addstr("SCORE LIST DELETED");
+            }
+            else if(lang==1)
+            {
+               addstr("LISTA DE PUNTUACIONES ELIMINADA");
+            }
+            rs_score=0;
+         }
+         else
+         {
+            rs_score++;
+         }
+      }*/
       else if (option == ' ')
       {
          // Cambiar dificultad al pulsar espacio y despues dibujar de nuevo el menu para actualizar la dificultad
@@ -76,31 +128,66 @@ void main_menu()
          {
             init_config();
             difficult = 1;
-            draw_main_menu();
+            if (lang == 0)
+            {
+               draw_main_menu();
+            }
+            else if (lang == 1)
+            {
+               draw_main_menu_esp();
+            }
          }
          else if (difficult == 1)
          {
             init_config_h();
             difficult = 2;
-            draw_main_menu();
+            if (lang == 0)
+            {
+               draw_main_menu();
+            }
+            else if (lang == 1)
+            {
+               draw_main_menu_esp();
+            }
          }
          else if (difficult == 2)
          {
             init_config_x();
             difficult = 3;
-            draw_main_menu();
+            if (lang == 0)
+            {
+               draw_main_menu();
+            }
+            else if (lang == 1)
+            {
+               draw_main_menu_esp();
+            }
          }
          else if (difficult == 3)
          {
             init_config_e();
             difficult = 0;
-            draw_main_menu();
+            if (lang == 0)
+            {
+               draw_main_menu();
+            }
+            else if (lang == 1)
+            {
+               draw_main_menu_esp();
+            }
          }
          else if (difficult == 4)
          {
             init_config_e();
             difficult = 0;
-            draw_main_menu();
+            if (lang == 0)
+            {
+               draw_main_menu();
+            }
+            else if (lang == 1)
+            {
+               draw_main_menu_esp();
+            }
          }
       }
    }
@@ -113,7 +200,14 @@ void options_menu(struct options *settings)
    char option, buf[30];
    int new;
    // Dibujar menu
-   draw_options_menu();
+   if (lang == 0)
+   {
+      draw_options_menu();
+   }
+   else if (lang == 1)
+   {
+      draw_options_menu_esp();
+   }
    // Ciclo de seleccion
    while (1)
    {
@@ -129,12 +223,12 @@ void options_menu(struct options *settings)
       // Opciones
       if (option == '1')
       {
-         sprintf(buf, "Valor actual: %d\n", settings->overall_speed);
+         sprintf(buf, "Val: %d\n", settings->overall_speed);
          move(10, 0);
          addstr(buf);
          move(11, 0);
-         addstr("Introduzca nuevo valor: ");
-         move(11, 23);
+         addstr("N-Val: ");
+         move(11, 7);
          refresh();
          getch();
          getstr(buf);
@@ -143,27 +237,24 @@ void options_menu(struct options *settings)
          if (new < 0)
          {
             move(14, 0);
-            addstr("ERROR: Valor inválido");
+            addstr("ERROR: Invalid Val");
          }
          else
          {
             settings->overall_speed = new;
             move(14, 0);
-            addstr("VALOR CAMBIADO SATISFACTORIAMENTE");
+            addstr("OK...");
             difficult = 4;
          }
-         refresh();
-         sleep(2);
-         draw_options_menu();
       }
       else if (option == '2')
       {
-         sprintf(buf, "Valor actual: %d\n", settings->alien_speed);
+         sprintf(buf, "Val: %d\n", settings->alien_speed);
          move(10, 0);
          addstr(buf);
          move(11, 0);
-         addstr("Introduzca nuevo valor: ");
-         move(11, 23);
+         addstr("N-Val: ");
+         move(11, 7);
          refresh();
          getch();
          getstr(buf);
@@ -172,27 +263,24 @@ void options_menu(struct options *settings)
          if (new < 0)
          {
             move(14, 0);
-            addstr("ERROR: Valor inválido");
+            addstr("ERROR: Invalid Val");
          }
          else
          {
             settings->alien_speed = new;
             move(14, 0);
-            addstr("VALOR CAMBIADO SATISFACTORIAMENTE");
+            addstr("OK...");
             difficult = 4;
          }
-         refresh();
-         sleep(2);
-         draw_options_menu();
       }
       else if (option == '3')
       {
-         sprintf(buf, "Valor actual: %d\n", settings->shots_speed);
+         sprintf(buf, "Val: %d\n", settings->shots_speed);
          move(10, 0);
          addstr(buf);
          move(11, 0);
-         addstr("Introduzca nuevo valor: ");
-         move(11, 23);
+         addstr("N-Val: ");
+         move(11, 7);
          refresh();
          getch();
          getstr(buf);
@@ -201,27 +289,24 @@ void options_menu(struct options *settings)
          if (new < 0)
          {
             move(14, 0);
-            addstr("ERROR: Valor inválido");
+            addstr("ERROR: Invalid Val");
          }
          else
          {
             settings->shots_speed = new;
             move(14, 0);
-            addstr("VALOR CAMBIADO SATISFACTORIAMENTE");
+            addstr("OK...");
             difficult = 4;
          }
-         refresh();
-         sleep(2);
-         draw_options_menu();
       }
       else if (option == '4')
       {
-         sprintf(buf, "Valor actual: %d\n", settings->bombs_speed);
+         sprintf(buf, "Val: %d\n", settings->bombs_speed);
          move(10, 0);
          addstr(buf);
          move(11, 0);
-         addstr("Introduzca nuevo valor: ");
-         move(11, 23);
+         addstr("N-Val: ");
+         move(11, 7);
          refresh();
          getch();
          getstr(buf);
@@ -230,27 +315,24 @@ void options_menu(struct options *settings)
          if (new < 0)
          {
             move(14, 0);
-            addstr("ERROR: Valor inválido");
+            addstr("ERROR: Invalid Val");
          }
          else
          {
             settings->bombs_speed = new;
             move(14, 0);
-            addstr("VALOR CAMBIADO SATISFACTORIAMENTE");
+            addstr("OK...");
             difficult = 4;
          }
-         refresh();
-         sleep(2);
-         draw_options_menu();
       }
       else if (option == '5')
       {
-         sprintf(buf, "Valor actual: %d\n", settings->bombchance);
+         sprintf(buf, "Val: %d\n", settings->bombchance);
          move(10, 0);
          addstr(buf);
          move(11, 0);
          addstr("Introduzca nuevo valor: ");
-         move(11, 23);
+         move(11, 7);
          refresh();
          getch();
          getstr(buf);
@@ -259,27 +341,24 @@ void options_menu(struct options *settings)
          if (new < 0)
          {
             move(14, 0);
-            addstr("ERROR: Valor inválido");
+            addstr("ERROR: Invalid Val");
          }
          else
          {
             settings->bombchance = new;
             move(14, 0);
-            addstr("VALOR CAMBIADO SATISFACTORIAMENTE");
+            addstr("OK...");
             difficult = 4;
          }
-         refresh();
-         sleep(2);
-         draw_options_menu();
       }
       else if (option == '6')
       {
-         sprintf(buf, "Valor actual: %d\n", settings->alien_amount);
+         sprintf(buf, "Val: %d\n", settings->alien_amount);
          move(10, 0);
          addstr(buf);
          move(11, 0);
-         addstr("Introduzca nuevo valor: ");
-         move(11, 23);
+         addstr("N-Val: ");
+         move(11, 7);
          refresh();
          getch();
          getstr(buf);
@@ -288,27 +367,24 @@ void options_menu(struct options *settings)
          if (new < 0 || new > 1000)
          {
             move(14, 0);
-            addstr("ERROR: Valor inválido");
+            addstr("ERROR: Invalid Val");
          }
          else
          {
             settings->alien_amount = new;
             move(14, 0);
-            addstr("VALOR CAMBIADO SATISFACTORIAMENTE");
+            addstr("OK...");
             difficult = 4;
          }
-         refresh();
-         sleep(2);
-         draw_options_menu();
       }
       else if (option == '7')
       {
-         sprintf(buf, "Valor actual: %d\n", settings->shots_amount);
+         sprintf(buf, "Val: %d\n", settings->shots_amount);
          move(10, 0);
          addstr(buf);
          move(11, 0);
-         addstr("Introduzca nuevo valor: ");
-         move(11, 23);
+         addstr("N-Val: ");
+         move(11, 7);
          refresh();
          getch();
          getstr(buf);
@@ -317,27 +393,24 @@ void options_menu(struct options *settings)
          if (new < 0 || new > 1000)
          {
             move(14, 0);
-            addstr("ERROR: Valor inválido");
+            addstr("ERROR: Invalid Val");
          }
          else
          {
             settings->shots_amount = new;
             move(14, 0);
-            addstr("VALOR CAMBIADO SATISFACTORIAMENTE");
+            addstr("OK...");
             difficult = 4;
          }
-         refresh();
-         sleep(2);
-         draw_options_menu();
       }
       else if (option == '8')
       {
-         sprintf(buf, "Valor actual: %d\n", settings->bombs_amount);
+         sprintf(buf, "Val: %d\n", settings->bombs_amount);
          move(10, 0);
          addstr(buf);
          move(11, 0);
-         addstr("Introduzca nuevo valor: ");
-         move(11, 23);
+         addstr("N-Val: ");
+         move(11, 7);
          refresh();
          getch();
          getstr(buf);
@@ -346,27 +419,24 @@ void options_menu(struct options *settings)
          if (new < 0 || new > 1000)
          {
             move(14, 0);
-            addstr("ERROR: Valor inválido");
+            addstr("ERROR: Invalid Val");
          }
          else
          {
             settings->bombs_amount = new;
             move(14, 0);
-            addstr("VALOR CAMBIADO SATISFACTORIAMENTE");
+            addstr("OK...");
             difficult = 4;
          }
-         refresh();
-         sleep(2);
-         draw_options_menu();
       }
       else if (option == '9')
       {
-         sprintf(buf, "Valor actual: %d\n", settings->ingame_aliens);
+         sprintf(buf, "Val: %d\n", settings->ingame_aliens);
          move(10, 0);
          addstr(buf);
          move(11, 0);
-         addstr("Introduzca nuevo valor: ");
-         move(11, 23);
+         addstr("N-Val: ");
+         move(11, 7);
          refresh();
          getch();
          getstr(buf);
@@ -375,18 +445,15 @@ void options_menu(struct options *settings)
          if (new < 0 || new > 1000)
          {
             move(14, 0);
-            addstr("ERROR: Valor inválido");
+            addstr("ERROR: Invalid Val");
          }
          else
          {
             settings->ingame_aliens = new;
             move(14, 0);
-            addstr("VALOR CAMBIADO SATISFACTORIAMENTE");
+            addstr("OK...");
             difficult = 4;
          }
-         refresh();
-         sleep(2);
-         draw_options_menu();
       }
       else if (option == 'r' || option == 'R')
       {
@@ -396,6 +463,27 @@ void options_menu(struct options *settings)
       {
          endwin();
          exit(0);
+      }
+      else
+      {
+         if (lang == 0)
+         {
+            addstr("Invalid input...");
+         }
+         else if (lang == 1)
+         {
+            addstr("Entrada no válida...");
+         }
+      }
+      refresh();
+      sleep(1);
+      if (lang == 0)
+      {
+         draw_options_menu();
+      }
+      else if (lang == 1)
+      {
+         draw_options_menu_esp();
       }
    }
    clear();
@@ -407,9 +495,7 @@ void options_menu(struct options *settings)
 // Funcion que maneja el menu de pausa del juego
 void pause_menu()
 {
-   pthread_mutex_lock(&pointer_mutex);
    // Configurando biblioteca
-   echo();
    nodelay(stdscr, 0);
    // Dibujando menu
    move((LINES)-3, 0);
@@ -419,18 +505,51 @@ void pause_menu()
    getch();
    clear();
    // Reconfigurando biblioteca a su estado anterior
-   noecho();
-   cbreak();
    nodelay(stdscr, 1);
    // Dibujar estadisticas del juego y continuar
    show_stats();
-   pthread_mutex_unlock(&pointer_mutex);
 }
 
 // Esta funcion muestra la pantalla de victoria/derrota
 void gameover(int win)
 {
-   pthread_mutex_lock(&pointer_mutex);
+   // Configurando biblioteca
+   nodelay(stdscr, 0);
+   // Mostrando pantalla en dependencia de la condicion de victoria/derrota
+   clear();
+   if (win == 0)
+   {
+      move((LINES / 2) - 1, 0);
+      addstr("YOU HAVE FAILED: A BOMB HIT YOU");
+      move((LINES / 2), (0));
+   }
+   else if (win == 1)
+   {
+      move((LINES / 2) - 1, (0));
+      addstr("YOU HAVE WON THE BATTLE");
+      move((LINES / 2), (0));
+   }
+   else if (win == 2)
+   {
+      move((LINES / 2) - 1, 0);
+      addstr("YOU HAVE FAILED: THE ENEMY ALIENS HAVE REACHED EARTH");
+      move((LINES / 2), (0));
+   }
+   else if (win == 3)
+   {
+      move((LINES / 2) - 1, 0);
+      addstr("YOU HAVE FAILED: YOU HAVE GIVEN UP YOUR MISSION");
+      move((LINES / 2), (0));
+   }
+   addstr("PRESS ANY KEY TO CONTINUE...");
+   move(0, COLS - 1);
+   refresh();
+   sleep(2); // Esperar dos segundos antes de cerrar
+   getch();
+}
+
+void gameover_esp(int win)
+{
    // Configurando biblioteca
    nodelay(stdscr, 0);
    // Mostrando pantalla en dependencia de la condicion de victoria/derrota
@@ -440,35 +559,168 @@ void gameover(int win)
       move((LINES / 2) - 1, 0);
       addstr("HAS PERDIDO LA PARTIDA: UNA BOMBA TE HA IMPACTADO");
       move((LINES / 2), (0));
-      addstr("PRESIONA CUALQUIER TECLA PARA SALIR DEL JUEGO");
    }
    else if (win == 1)
    {
       move((LINES / 2) - 1, (0));
       addstr("HAS GANADO LA PARTIDA!!!");
       move((LINES / 2), (0));
-      addstr("PRESIONA CUALQUIER TECLA PARA SALIR DEL JUEGO");
    }
    else if (win == 2)
    {
       move((LINES / 2) - 1, 0);
       addstr("HAS PERDIDO LA PARTIDA: LOS ALIENS HAN LLEGADO A LA TIERRA");
       move((LINES / 2), (0));
-      addstr("PRESIONA CUALQUIER TECLA PARA SALIR DEL JUEGO");
    }
    else if (win == 3)
    {
       move((LINES / 2) - 1, 0);
       addstr("HAS PERDIDO LA PARTIDA: HAS RENUNCIADO A TU MISION");
       move((LINES / 2), (0));
-      addstr("PRESIONA CUALQUIER TECLA PARA SALIR DEL JUEGO");
    }
+   addstr("PRESIONA CUALQUIER TECLA PARA CONTINUAR");
    move(0, COLS - 1);
    refresh();
    sleep(2); // Esperar dos segundos antes de cerrar
    getch();
-   pthread_mutex_unlock(&pointer_mutex);
 }
+
+// Esta funcion muestra la tabla de puntuaciones al final del juego
+/*void gameover_score()
+{
+   clear();
+   load_score();
+   move(0, 0);
+   if (lang == 0)
+   {
+      addstr("SCORE BOARD");
+   }
+   else if (lang == 1)
+   {
+      addstr("TABLA DE PUNTUACIONES");
+   }
+   int list_score[10];
+   char *list_name[10];
+   for (int i = 0; i < 10; i++)
+   {
+      if (difficult == 0)
+      {
+         list_score[i] = high_scores.score[i];
+         list_name[i] = hs_names.names[i];
+      }
+      else if (difficult == 1)
+      {
+         list_score[i] = high_scores.score[i + 10];
+         list_name[i] = hs_names.names[i + 10];
+      }
+      else if (difficult == 2)
+      {
+         list_score[i] = high_scores.score[i + 20];
+         list_name[i] = hs_names.names[i + 20];
+      }
+      else if (difficult == 3)
+      {
+         list_score[i] = high_scores.score[i + 30];
+         list_name[i] = hs_names.names[i + 30];
+      }
+   }
+   move(2, (0));
+   addstr("1- ");
+   printw("%s", list_name[0]);
+   addstr(" - ");
+   printw("%d", list_score[0]);
+   move(3, (0));
+   addstr("2-Custom Difficult");
+   move(4, (0));
+   addstr("3-View Score Board");
+   move(5, (0));
+   addstr("4-Visit Website");
+   move(6, (0));
+   addstr("5-Exit");
+   move(7, (0));
+   addstr("3-View Score Board");
+   move(8, (0));
+   addstr("4-Visit Website");
+   move(9, (0));
+   addstr("5-Exit");
+   move(10, (0));
+   getch();
+}
+// Esta funcion muestra la tabla de puntuaciones accesible desde el menu principal
+void mainmenu_score()
+{
+   clear();
+   load_score();
+   //echo();
+   //nocbreak();
+   nodelay(stdscr, 0);
+   if (lang == 0)
+   {
+      move(0, COLS/2 - 10);
+      addstr("SCORE BOARD");
+      move(1, 0);
+      addstr("EASY");
+      move(1, COLS/4);
+      addstr("NORMAL");
+      move(1, COLS/2);
+      addstr("HARD");
+      move(1, COLS/2 + COLS/4);
+      addstr("INSANE");
+   }
+   else if (lang == 1)
+   {
+      move(0, COLS/2 - 15);
+      addstr("TABLA DE PUNTUACIONES");
+      move(1, 0);
+      addstr("FACIL");
+      move(1, COLS/4);
+      addstr("NORMAL");
+      move(1, COLS/2);
+      addstr("DIFICIL");
+      move(1, COLS/2 + COLS/4);
+      addstr("EXTREMO");
+   }
+   char* name;
+   int score;
+   for(int i=0; i<10; i++)
+   {
+      score=high_scores.score[i];
+      name=hs_names.names[i];
+      move(i+2,0);
+      printw("%s", name);
+      addstr(" - ");
+      printw("%d", score);
+   }
+   for(int i=10; i<20; i++)
+   {
+      score=high_scores.score[i];
+      name=hs_names.names[i];
+      move(i+2-10,COLS/4);
+      printw("%s", name);
+      addstr(" - ");
+      printw("%d", score);
+   }
+   for(int i=20; i<30; i++)
+   {
+      score=high_scores.score[i];
+      name=hs_names.names[i];
+      move(i+2-20,COLS/2);
+      printw("%s", name);
+      addstr(" - ");
+      printw("%d", score);
+   }
+   for(int i=30; i<40; i++)
+   {
+      score=high_scores.score[i];
+      name=hs_names.names[i];
+      move(i+2-30,COLS/2 + COLS/4);
+      printw("%s", name);
+      addstr(" - ");
+      printw("%d", score);
+   }
+   refresh();
+   getch();
+}*/
 
 //--------------------------------------------------------IMPLEMENTANDO FUNCIONES DE PANTALLA------------------------------------------------------------------
 
@@ -476,37 +728,38 @@ void gameover(int win)
 void show_stats()
 {
    // Mostrar titulo, score, opciones...
-   pthread_mutex_lock(&pointer_mutex);
-   move(0, (COLS / 2) - 9);
-   addstr("--MATCOM INVADERS--");
+   move(0, 0);
+   move(0, (COLS / 2) - 6);
+   addstr("--ALIEN INVADERS--");
    move(0, 1);
    addstr("SCORE: ");
+   move(0, 15);
+   addstr("REMAINING: ");
    move(0, COLS - 21);
-   addstr("P = Pausa  Q = Salir");
+   if (lang == 0)
+   {
+      addstr("P = Pause  Q = Exit");
+   }
+   else if (lang == 1)
+   {
+      addstr("P = Pausa  Q = Salir");
+   }
    move(0, COLS - 1);
-   refresh();
-   pthread_mutex_unlock(&pointer_mutex);
-}
-
-// Funcion que muestra la puntuacion
-void show_score()
-{
-   pthread_mutex_lock(&pointer_mutex);
-   pthread_mutex_lock(&score_mutex);
    sprintf(tellscore, "%d", score);
    move(0, 8);
    addstr(tellscore);
-   move(0, COLS - 1);
+   addstr("-");
+   sprintf(tellscore, "%d", currentaliens);
+   move(0, 26);
+   addstr(tellscore);
+   addstr("-");
+   move(0, 0);
    refresh();
-   pthread_mutex_unlock(&score_mutex);
-   pthread_mutex_unlock(&pointer_mutex);
 }
 
 // Funcion que mueve al jugador
 void move_player()
 {
-   pthread_mutex_lock(&player_mutex);
-   pthread_mutex_lock(&pointer_mutex);
    //  Pone el puntero en la posicion actualizada del jugador y lo dibuja
    move(tank.r, tank.c);
    addch(tank.ch);
@@ -519,15 +772,13 @@ void move_player()
    {
       tank.c = 0;
    }
-   pthread_mutex_unlock(&pointer_mutex);
-   pthread_mutex_unlock(&player_mutex);
 }
 
 // Funcion que mueve las bombas de aliens
 void move_bombs()
 {
    pthread_mutex_lock(&bomb_mutex);
-   pthread_mutex_lock(&pointer_mutex);
+   attron(COLOR_PAIR(2));
    if (loops % settings.bombs_speed == 0) // La variable loops define la velocidad a la que va el juego.
    {
       for (int i = 0; i < settings.bombs_amount; ++i)
@@ -564,9 +815,7 @@ void move_bombs()
          }
       }
    }
-   move(0, COLS - 1);
-   refresh();
-   pthread_mutex_unlock(&pointer_mutex);
+   attroff(COLOR_PAIR(2));
    pthread_mutex_unlock(&bomb_mutex);
 }
 
@@ -574,9 +823,7 @@ void move_bombs()
 void move_shots()
 {
    pthread_mutex_lock(&alien_mutex);
-   pthread_mutex_lock(&pointer_mutex);
-   pthread_mutex_lock(&score_mutex);
-   pthread_mutex_lock(&shot_mutex);
+   attron(COLOR_PAIR(3));
    if (loops % settings.shots_speed == 0)
    {
       for (int i = 0; i < settings.shots_amount; ++i)
@@ -626,11 +873,7 @@ void move_shots()
          }
       }
    }
-   move(0, COLS - 1);
-   refresh();
-   pthread_mutex_unlock(&shot_mutex);
-   pthread_mutex_unlock(&score_mutex);
-   pthread_mutex_unlock(&pointer_mutex);
+   attroff(COLOR_PAIR(3));
    pthread_mutex_unlock(&alien_mutex);
 }
 
@@ -640,7 +883,7 @@ void move_aliens()
    if (loops % settings.alien_speed == 0)
    {
       pthread_mutex_lock(&alien_mutex);
-      pthread_mutex_lock(&pointer_mutex);
+      attron(COLOR_PAIR(1));
       // Actualizando tiempo de apairicion de cada alien del juego
       for (int i = 0; i < settings.alien_amount; i++)
       {
@@ -810,7 +1053,7 @@ void move_aliens()
                   }
                }
             }
-            //Definiendo accion en los bordes
+            // Definiendo accion en los bordes
             if (ingame_aliens[i].c == COLS - 2)
             {
                ++ingame_aliens[i].r;
@@ -823,9 +1066,7 @@ void move_aliens()
             }
          }
       }
-      move(0, COLS - 1);
-      refresh();
-      pthread_mutex_unlock(&pointer_mutex);
+      attroff(COLOR_PAIR(1));
       pthread_mutex_unlock(&alien_mutex);
    }
 }
@@ -834,7 +1075,7 @@ void move_aliens()
 void act_screen()
 {
    // Refrescar pantalla
-   move(0, COLS - 1);
+   move(0, 0);
    refresh();
    // Esperar tantos milisegundos como se haya definido en las opciones (velocidad del juego)
    usleep(settings.overall_speed);
@@ -847,18 +1088,70 @@ void draw_main_menu()
 {
    clear();
    move((LINES / 2) - 10, (0));
-   addstr("MATCOM INVADERS");
+   addstr("ALIEN INVADERS");
    move((LINES / 2) - 9, (0));
-   addstr("UN JUEGO HECHO POR: Laura Martir Beltrán & Luis Daniel Silva Martínez");
+   addstr("A GAME BY: HadrianC (Ver: 2.0)");
+   move((LINES / 2) - 6, (0));
+   addstr("1-Start Game");
+   move((LINES / 2) - 5, (0));
+   addstr("2-Custom Difficult");
+   move((LINES / 2) - 4, (0));
+   //addstr("3-View Score Board");
+   //move((LINES / 2) - 3, (0));
+   addstr("3-Visit Website");
+   move((LINES / 2) - 2, (0));
+   addstr("4-Exit");
+   move((LINES / 2) + 1, (0));
+   addstr("Actual Difficult:");
+   if (difficult == 0)
+   {
+      addstr("EASY");
+   }
+   else if (difficult == 1)
+   {
+      addstr("NORMAL");
+   }
+   else if (difficult == 2)
+   {
+      addstr("HARD");
+   }
+   else if (difficult == 3)
+   {
+      addstr("INSANE");
+   }
+   else
+   {
+      addstr("CUSTOM");
+   }
+   move((LINES)-3, (0));
+   addstr("PRESS [1,2,3,4,5] TO SELECT AN OPTION");
+   move((LINES)-2, (0));
+   addstr("PRESS [SPACE] TO CHANGE DIFFICULTY");
+   move((LINES)-1, (0));
+   addstr("PRESS [L] TO CHANGE LANGUAGE (English | Spanish)");
+   move(0, COLS - 1);
+   refresh();
+}
+
+void draw_main_menu_esp()
+{
+   clear();
+   move((LINES / 2) - 10, (0));
+   addstr("ALIEN INVADERS");
+   move((LINES / 2) - 9, (0));
+   addstr("UN JUEGO HECHO POR: HadrianC (Ver: 2.0)");
    move((LINES / 2) - 6, (0));
    addstr("1-Empezar partida");
    move((LINES / 2) - 5, (0));
    addstr("2-Personalizar dificutad");
    move((LINES / 2) - 4, (0));
-   addstr("3-Salir del juego");
+   //addstr("3-Verificar tabla de puntuaciones");
+   //move((LINES / 2) - 3, (0));
+   addstr("3-Visitar el repositorio");
    move((LINES / 2) - 2, (0));
+   addstr("4-Salir del juego");
+   move((LINES / 2) + 1, (0));
    addstr("Dificultad actual:");
-   move((LINES / 2) - 2, (20));
    if (difficult == 0)
    {
       addstr("FACIL");
@@ -880,15 +1173,52 @@ void draw_main_menu()
       addstr("PERSONALIZADA");
    }
    move((LINES)-3, (0));
-   addstr("PRESIONE [1,2,3] PARA SELECCIONAR UNA OPCION");
+   addstr("PRESIONE [1,2,3,4] PARA SELECCIONAR UNA OPCION");
    move((LINES)-2, (0));
    addstr("PRESIONE [ESPACIO] PARA CAMBIAR LA DIFICULTAD");
+   move((LINES)-1, (0));
+   addstr("PRESIONE [L] PARA CAMBIAR EL LENGUAJE (English | Spanish)");
    move(0, COLS - 1);
    refresh();
 }
 
 // Dibujar menu de opciones
 void draw_options_menu()
+{
+   // Configurando biblioteca
+   clear();
+   echo();
+   nocbreak();
+   nodelay(stdscr, 0);
+   // Dibujando menu
+   move(0, 0);
+   addstr("1. CHANGE GAME SPEED");
+   move(1, 0);
+   addstr("2. CHANGE ALIENS SPEED");
+   move(2, 0);
+   addstr("3. CHANGE PLAYER BULLETS SPEED");
+   move(3, 0);
+   addstr("4. CHANGE ENEMY BOMBS SPEED");
+   move(4, 0);
+   addstr("5. CHANGE ENEMY SHOOTING SPEED");
+   move(5, 0);
+   addstr("6. CHANGE ENEMY HORDE SIZE");
+   move(6, 0);
+   addstr("7. CHANGE MAX AMMOUNT OF BULLETS IN SCREEN");
+   move(7, 0);
+   addstr("8. CHANGE MAX AMMOUNT OF BOMBS IN SCREEN");
+   move(8, 0);
+   addstr("9. CHANGE MAX AMMOUNT OF ENEMY ALIENS IN SCREEN");
+   move(9, 0);
+   addstr("R. RETURN TO MAIN MENU");
+   move(10, 0);
+   addstr("Q. EXIT GAME");
+   move(11, 0);
+   addstr("ENTER YOUR OPTION: ");
+   refresh();
+}
+
+void draw_options_menu_esp()
 {
    // Configurando biblioteca
    clear();
@@ -931,12 +1261,8 @@ void write_input()
    // Recibir entrada
    input = getch();
    // Borrar posicion vieja del tanque
-   pthread_mutex_lock(&pointer_mutex);
-   pthread_mutex_lock(&player_mutex);
    move(tank.r, tank.c);
    addch(' ');
-   pthread_mutex_unlock(&player_mutex);
-   pthread_mutex_unlock(&pointer_mutex);
    //  Verificar entrada del teclado
    if (input == 'q')
    {
@@ -947,20 +1273,15 @@ void write_input()
    // Actualizar posicion del jugador
    else if (input == KEY_LEFT)
    {
-      pthread_mutex_lock(&player_mutex);
       --tank.c;
-      pthread_mutex_unlock(&player_mutex);
    }
    else if (input == KEY_RIGHT)
    {
-      pthread_mutex_lock(&player_mutex);
       ++tank.c;
-      pthread_mutex_unlock(&player_mutex);
    }
    // Efectuar disparo
    else if (input == ' ' && currentshots < settings.shots_amount)
    {
-      pthread_mutex_lock(&shot_mutex);
       for (int i = 0; i < settings.shots_amount; ++i)
       {
          if (shot[i].active == 0)
@@ -968,17 +1289,21 @@ void write_input()
             // Dibujar nuevo disparo
             shot[i].active = 1;
             ++currentshots;
-            --score;
+            if (score >= 0)
+            {
+               --score;
+            }
             shot[i].r = LINES - 2;
             shot[i].c = tank.c;
             break;
          }
       }
-      pthread_mutex_unlock(&shot_mutex);
    }
    // Abrir menu de opciones
-   else if (input == 'p')
+   else if (input == 'p' || input == 'P')
+   {
       pause_menu();
+   }
 }
 
 // Definir configuracion normal de las variables
@@ -1063,6 +1388,8 @@ void starting_game()
    aliens = malloc(sizeof(t_alien) * settings.alien_amount);
    ingame_aliens = malloc(sizeof(t_alien) * settings.ingame_aliens);
    alien_out_time = malloc(sizeof(int) * settings.ingame_aliens);
+   shot = malloc(sizeof(t_shot) * settings.shots_amount);
+   bomb = malloc(sizeof(t_bomb) * settings.bombs_amount);
 
    for (int i = 0; i < settings.alien_amount; i++)
    {
@@ -1154,12 +1481,63 @@ void starting_game()
    }
 }
 
+// Guardando puntuaciones
+/*void save_score()
+{
+   // Cargando archivo de puntuaciones
+   FILE *file;
+   file = fopen("high_scores.txt", "w");
+   if (file == NULL)
+   {
+      perror("Error al abrir el archivo [high_scores.txt]"), exit(1);
+   }
+   // Guardando puntuaciones en el archivo
+   for(int i=0; i<40; i++)
+   {
+      fprintf(file, "%s %d\n", hs_names.names[i], high_scores.score[i]);
+   }
+   fclose(file);
+}
+
+// Cargando puntuaciones
+void load_score()
+{
+   // Cargando archivo de puntuaciones
+   FILE *file;
+   file = fopen("high_scores.txt", "r");
+   if (file == NULL)
+   {
+      perror("Error al abrir el archivo [high_scores.txt]"), exit(1);
+   }
+   int i=0;
+   char linea[100];
+   while (fgets(linea, sizeof(linea), file) != NULL && i<40)
+   {
+      sscanf(linea, "%10s %10d", hs_names.names[i], &high_scores.score[i]);
+      i++;
+   }
+   fclose(file);
+}
+
+// Resetear puntuaciones
+void reset_score()
+{
+   for (int i = 0; i < 40; i++)
+   {
+      high_scores.score[i] = -1;
+      hs_names.names[i] = "None";
+   }
+   save_score();
+}*/
+
 //-------------------------------------------------------------------DECLARANDO HILOS--------------------------------------------------------------------------
 
 void *game_logic_thread(void *arg)
 {
    while (1)
    {
+      // Mostrar puntuacion
+      show_stats();
       // Mover jugador
       move_player();
       // Mover bombas
@@ -1173,6 +1551,7 @@ void *game_logic_thread(void *arg)
       // Ejecutar entrada del teclado
       write_input();
 
+      // Aqui no pongo mutex porque solo estoy leyendo el valor
       if (!(win == -1))
       {
          break;
@@ -1193,10 +1572,6 @@ void *events_thread(void *arg)
       if (currentaliens == 0)
       {
          win = 1;
-         pthread_mutex_unlock(&win_mutex);
-         pthread_mutex_unlock(&bomb_mutex);
-         pthread_mutex_unlock(&alien_mutex);
-         break;
       }
       // Algun alien llego al final
       for (int i = 0; i < settings.ingame_aliens; ++i)
@@ -1204,7 +1579,6 @@ void *events_thread(void *arg)
          if (ingame_aliens[i].r == LINES - 1)
          {
             win = 2;
-            pthread_mutex_unlock(&win_mutex);
             pthread_mutex_unlock(&bomb_mutex);
             pthread_mutex_unlock(&alien_mutex);
             break;
@@ -1216,17 +1590,14 @@ void *events_thread(void *arg)
          if (bomb[i].r == tank.r && bomb[i].c == tank.c)
          {
             win = 0;
-            pthread_mutex_unlock(&win_mutex);
             pthread_mutex_unlock(&bomb_mutex);
             pthread_mutex_unlock(&alien_mutex);
             break;
          }
       }
-      pthread_mutex_unlock(&win_mutex);
       pthread_mutex_unlock(&bomb_mutex);
       pthread_mutex_unlock(&alien_mutex);
-
-      pthread_mutex_lock(&win_mutex);
+      // Comprobando si termino el juego
       if (!(win == -1))
       {
          pthread_mutex_unlock(&win_mutex);
@@ -1237,34 +1608,16 @@ void *events_thread(void *arg)
    return NULL;
 }
 
-void *score_thread(void *arg)
-{
-   while (1)
-   {
-      // Actualizar puntuacion
-      show_score();
-      if (!(win == -1))
-      {
-         break;
-      }
-   }
-   return NULL;
-}
-
 //-----------------------------------------------------------------FUNCIONES PRINCIPALES-----------------------------------------------------------------------
 
 // Funcion que maneja el gameplay
 void game()
 {
-   // Mostrar carteles de titulo, score, opciones...
-   show_stats();
-
    // Creando hilos
-   pthread_t event_th, game_th, score_th;
+   pthread_t event_th, game_th;
    // Inicializando funciones de hilos
    pthread_create(&event_th, NULL, events_thread, NULL);
    pthread_create(&game_th, NULL, game_logic_thread, NULL);
-   pthread_create(&score_th, NULL, score_thread, NULL);
    // Ciclo de juego
    while (1)
    {
@@ -1279,15 +1632,26 @@ void game()
    }
    // Esperando a que terminen los hilos
    pthread_join(event_th, NULL);
-   pthread_join(score_th, NULL);
    pthread_join(game_th, NULL);
 
    // Liberando memoria de los arrays reservados
    free(aliens);
    free(ingame_aliens);
    free(alien_out_time);
+   free(shot);
    // Terminando partida
-   gameover(win);
+   if (lang == 0)
+   {
+      gameover(win);
+   }
+   else if (lang == 1)
+   {
+      gameover_esp(win);
+   }
+   if (difficult != 4)
+   {
+      //gameover_score();
+   }
 }
 
 // Funcion principal que maneja la entrada del usuario, la pantalla de juego y condiciones de victoria/derrota
@@ -1301,9 +1665,15 @@ int main(int argc, char const *argv[])
    nodelay(stdscr, 1);
    keypad(stdscr, 1);
    srand(time(NULL));
+   start_color();
+   init_pair(1, COLOR_BLUE, COLOR_BLACK); // Color de aliens
+   init_pair(2, COLOR_CYAN, COLOR_BLACK); // Color de bombas
+   init_pair(3, COLOR_RED, COLOR_BLACK);  // Color de disparos
 
    // Establecer configuracion inicial
    init_config();
+   rs_score=0;
+
    // Mostrando menu principal
    while (1)
    {

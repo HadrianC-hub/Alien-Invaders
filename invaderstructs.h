@@ -7,6 +7,16 @@ struct player
 	char ch;		//Imagen en consola
 };
 
+struct scores 
+{
+	int score[40];
+} t_scores;
+
+struct names
+{
+	char* names[40];
+} t_names;
+
 //Alien enemigo
 struct alien 
 {
@@ -26,7 +36,7 @@ struct shoot
 	int r,c;		//Posicion especifica del disparo
 	int active; 	//1=activo 0=inactivo
 	char ch;		//Imagen en consola
-};
+} t_shot;
 
 //Bomba del enemigo
 struct bomb 
@@ -35,7 +45,7 @@ struct bomb
 	int active; 	//1=activa 0=inactiva
 	int loop; 		//Usado para prevenir al alien que flashee cuando es arrojada
 	char ch;		//Imagen en consola
-};
+} t_bomb;
 
 //Parametros modificables del juego
 struct options 
@@ -50,17 +60,21 @@ void main_menu();
 void options_menu(struct options *settings);
 void pause_menu();
 void gameover(int win);
+void gameover_esp(int win);
 void game();
+void mainmenu_score();
+void gameover_score();
 
 //FUNCIONES QUE DIBUJAN EN PANTALLA
 void draw_main_menu();
+void draw_main_menu_esp();
 void draw_options_menu();
+void draw_options_menu_esp();
 void act_screen();
 void move_aliens();
 void move_shots();
 void move_bombs();
 void move_player();
-void show_score();
 void show_stats();
 
 //OTRAS FUNCIONES
@@ -70,4 +84,7 @@ void init_config_e();
 void init_config_h();
 void init_config_x();
 void starting_game();
+void save_score();
+void load_score();
+void reset_score();
 
